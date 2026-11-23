@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#262736">
+  <title>App BNC - Pago Móvil</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-512.png">
+  <style>
+    :root {
+      --bg-top: #2f3244;
+      --bg-bottom: #1d1f2d;
+      --card-bg: #36384e;
+      --input-bg: #ffffff;
+      --select-bg: #d1d3dc;
+      --orange: #f58220;
+      --orange-btn: #f26522;
+      --green: #008f39;
+      --gray-btn: #6c6e7e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      color: #ffffff;
+      background: linear-gradient(160deg, #2b2d3e 0%, #2b2d3e 42%, #232534 42.1%, #232534 72%, #191a26 72.1%, #191a26 100%);
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    /* PANTALLA DE INICIO (SPLASH SCREEN) */
+    #splashScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: linear-gradient(162deg, #2f3244 0%, #2f3244 54%, #1f2130 54.1%, #1f2130 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 14px solid var(--orange-btn);
+      transition: opacity 0.45s ease, visibility 0.45s ease;
+    }
+
+    #splashScreen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash-logo-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      animation: pulseIn 0.6s ease-out;
+    }
+
+    .bnc-wordmark {
+      font-size: 46px;
+      font-weight: 900;
+      font-style: italic;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+      line-height: 1;
+      font-family: 'Arial Black', 'Segoe UI', sans-serif;
+    }
+
+    @keyframes pulseIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* CONTENEDOR PRINCIPAL */
+    .container {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+
+    .hidden-view {
+      display: none !important;
+    }
+
+    .header-title {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      margin: 4px 0 6px;
+      letter-spacing: 0.2px;
+    }
+
+    /* FORMULARIO */
+    .select-full {
+      width: 100%;
+      height: 52px;
+      background-color: var(--select-bg);
+      color: #2b2d42;
+      border: none;
+      border-radius: 8px;
+      padding: 0 14px;
+      font-size: 16px;
+      font-weight: 500;
+      outline: none;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 48px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .tab-btn {
+      border: none;
+      background-color: var(--card-bg);
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .tab-btn.active {
+      background-color: var(--orange-btn);
+      font-weight: 600;
+    }
+
+    /* DIRECTORIO COMO VENTANA SUPERPUESTA */
+    .directory-overlay {
+      position: fixed; inset: 0; z-index: 5000; display: flex;
+      align-items: center; justify-content: center; padding: 22px;
+      background: rgba(10, 11, 20, .76); backdrop-filter: blur(5px);
+    }
+    .directory-modal {
+      width: min(100%, 440px); max-height: min(78vh, 680px);
+      background: #2b2d3e; border: 1px solid #777a9a; border-radius: 16px;
+      padding: 16px; display: flex; flex-direction: column; gap: 12px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+    }
+    .directory-modal-head { display:flex; align-items:center; justify-content:space-between; font-size:20px; font-weight:700; }
+    .directory-close { border:0; border-radius:9px; width:38px; height:38px; color:white; background:#f26522; font-size:24px; }
+    .directory-panel {
+      background-color: #2b2d3e;
+      border: 1px solid #484a66;
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 58vh;
+      overflow-y: auto;
+      border: 0; padding: 0;
+    }
+
+    .dir-empty {
+      text-align: center;
+      font-size: 14px;
+      color: #cbd5e1;
+      padding: 14px 8px;
+    }
+
+    .dir-item {
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    .dir-item:active {
+      border-color: var(--orange-btn);
+    }
+
+    .dir-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .dir-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .dir-sub {
+      font-size: 13px;
+      color: #d1d5db;
+    }
+
+    .dir-del-btn {
+      background-color: #dc2626;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      width: 30px;
+      height: 30px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .row-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .prefix-select {
+      width: 84px;
+      height: 52px;
+      background-color: var(--select-bg);
+      color: #2b2d42;
+      border: none;
+      border-radius: 8px;
+      padding: 0 8px;
+      font-size: 15.5px;
+      font-weight: 500;
+      outline: none;
+      flex-shrink: 0;
+    }
+
+    .text-input {
+      width: 100%;
+      height: 52px;
+      background-color: var(--input-bg);
+      color: #222222;
+      border: none;
+      border-radius: 8px;
+      padding: 0 14px;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .text-input::placeholder {
+      color: #9ca3af;
+    }
+
+    .row-group .text-input {
+      flex: 1;
+    }
+
+    .icon-btn {
+      width: 54px;
+      height: 52px;
+      border: none;
+      border-radius: 8px;
+      background-color: var(--orange-btn);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .qr-box {
+      width: 54px;
+      height: 52px;
+      border-radius: 8px;
+      background-color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .info-card {
+      background-color: #2c2e42;
+      border: 1px solid #484a66;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      line-height: 1.45;
+      color: #e5e7eb;
+    }
+
+    .info-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background-color: #ffffff;
+      color: #1e1d2b;
+      font-weight: 800;
+      font-style: italic;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .switch-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 15.5px;
+      padding: 2px 0;
+    }
+
+    .switch {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      background-color: #4b4d63;
+      border-radius: 26px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .slider:before {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #9ca3af;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+
+    input:checked + .slider {
+      background-color: var(--orange-btn);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+      background-color: #ffffff;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .action-btn {
+      height: 50px;
+      border: none;
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 16.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-gray { background-color: var(--gray-btn); }
+    .btn-green { background-color: var(--green); }
+
+    /* VISTA COMPROBANTE */
+    .receipt-card {
+      background-color: #36384e;
+      border-radius: 14px;
+      padding: 18px 0 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    }
+
+    .bnc-receipt-wordmark {
+      font-size: 24px;
+      font-weight: 900;
+      font-style: italic;
+      line-height: 1;
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+      font-family: 'Arial Black', 'Segoe UI', sans-serif;
+    }
+
+    .receipt-tagline {
+      font-size: 14.5px;
+      color: #e5e7eb;
+      margin: 8px 0 18px;
+      text-align: center;
+    }
+
+    .success-banner {
+      width: calc(100% - 28px);
+      background-color: #292b3d;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .success-check-box {
+      width: 76px;
+      height: 76px;
+      background-color: var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .success-text {
+      padding: 0 16px;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .receipt-line {
+      font-size: 18px;
+      color: #f3f4f6;
+      text-align: center;
+      margin: 4px 16px;
+      line-height: 1.35;
+    }
+
+    .monto-strip {
+      width: 100%;
+      background-color: var(--green);
+      padding: 13px 16px;
+      margin: 16px 0;
+      text-align: center;
+      font-size: 21px;
+      font-weight: 700;
+    }
+
+    .ref-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 8px 0;
+      width: 100%;
+      position: relative;
+    }
+
+    .copy-ref-btn {
+      position: absolute;
+      right: 16px;
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      border: none;
+      background-color: #f58220;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .share-bar {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin: 18px 0 8px;
+    }
+
+    .social-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PANTALLA DE BIENVENIDA CON ICONO BNC -->
+  <div id="splashScreen">
+    <div class="splash-logo-wrap">
+      <svg width="160" height="72" viewBox="0 0 160 72" fill="none">
+        <path d="M12 66 C12 52 17 40 25 30 L74 66 Z" fill="#ffffff"/>
+        <path d="M29 26 C37 18 46 12 56 8 L77 66 Z" fill="#ffffff"/>
+        <path d="M61 7 C69 5 77 4 85 5 L80 66 Z" fill="#ffffff"/>
+        <path d="M90 6 C100 7 110 11 118 17 L83 66 Z" fill="#ffffff"/>
+        <path d="M123 21 C139 33 148 49 148 66 L87 66 Z" fill="#ffffff"/>
+      </svg>
+      <div class="bnc-wordmark">BNC</div>
+    </div>
+  </div>
+
+  <!-- VISTA 1: FORMULARIO -->
+  <div id="formView" class="container">
+    <div class="header-title">Pago Móvil BNC</div>
+
+    <select id="cuentaDebitada" class="select-full">
+      <option value="***9970">Cuenta a Debitar (***9970)</option>
+    </select>
+
+    <div class="tabs">
+      <button type="button" id="tabDir" class="tab-btn" onclick="switchTab('dir')">Directorio</button>
+      <button type="button" id="tabSin" class="tab-btn active" onclick="switchTab('sin')">Sin Registrar</button>
+    </div>
+
+    <div id="directoryOverlay" class="directory-overlay hidden-view" onclick="if(event.target===this) switchTab('sin')">
+      <div class="directory-modal" role="dialog" aria-modal="true" aria-label="Directorio de beneficiarios">
+        <div class="directory-modal-head"><span>Directorio de beneficiarios</span><button type="button" class="directory-close" onclick="switchTab('sin')" aria-label="Cerrar">×</button></div>
+        <div id="directoryPanel" class="directory-panel"></div>
+      </div>
+    </div>
+
+    <select id="bancoDestino" class="select-full">
+      <option value="0102-Venezuela">Banco Beneficiario</option>
+      <option value="0102-Venezuela">0102 - Venezuela</option>
+      <option value="0104-Venezolano de Crédito">0104 - Venezolano de Crédito</option>
+      <option value="0105-Mercantil">0105 - Mercantil</option>
+      <option value="0108-Provincial">0108 - Provincial</option>
+      <option value="0114-Bancaribe">0114 - Bancaribe</option>
+      <option value="0115-Exterior">0115 - Exterior</option>
+      <option value="0128-Banco Caroní">0128 - Banco Caroní</option>
+      <option value="0134-Banesco">0134 - Banesco</option>
+      <option value="0137-Sofitasa">0137 - Sofitasa</option>
+      <option value="0138-Banco Plaza">0138 - Banco Plaza</option>
+      <option value="0146-Bangente">0146 - Bangente</option>
+      <option value="0151-BFC Banco Fondo Común">0151 - BFC Banco Fondo Común</option>
+      <option value="0156-100% Banco">0156 - 100% Banco</option>
+      <option value="0157-DelSur">0157 - DelSur</option>
+      <option value="0163-Banco del Tesoro">0163 - Banco del Tesoro</option>
+      <option value="0166-Banco Agrícola">0166 - Banco Agrícola de Venezuela</option>
+      <option value="0168-Bancrecer">0168 - Bancrecer</option>
+      <option value="0169-R4 Banco Microfinanciero">0169 - R4 Banco Microfinanciero</option>
+      <option value="0171-Banco Activo">0171 - Banco Activo</option>
+      <option value="0172-Bancamiga">0172 - Bancamiga</option>
+      <option value="0173-BID">0173 - Banco Internacional de Desarrollo</option>
+      <option value="0174-Banplus">0174 - Banplus</option>
+      <option value="0175-BDT">0175 - Banco Digital de los Trabajadores</option>
+      <option value="0177-Banfanb">0177 - Banfanb</option>
+      <option value="0178-N58 Banco Digital">0178 - N58 Banco Digital</option>
+      <option value="0191-BNC">0191 - BNC</option>
+    </select>
+
+    <div class="row-group">
+      <select id="codCelular" class="prefix-select">
+        <option value="0412">0412</option>
+        <option value="0422">0422</option>
+        <option value="0414">0414</option>
+        <option value="0424">0424</option>
+        <option value="0416">0416</option>
+        <option value="0426">0426</option>
+      </select>
+      <input type="tel" id="celular" class="text-input" placeholder="Celular" maxlength="7">
+      <button type="button" class="icon-btn" onclick="pegarCelular()" title="Pegar">
+        <svg width="38" height="38" viewBox="0 0 40 40" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="10" width="23" height="25" rx="5"/><path d="M12 7h10"/><path d="M31 7h2a3 3 0 0 1 3 3v2M36 18v3M36 28v2a3 3 0 0 1-3 3" stroke-dasharray="3 3"/><path d="M14 5h7"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="row-group">
+      <select id="tipoDoc" class="prefix-select">
+        <option value="V">V</option>
+        <option value="E">E</option>
+        <option value="J">J</option>
+        <option value="G">G</option>
+        <option value="P">P</option>
+      </select>
+      <input type="text" id="cedula" class="text-input" placeholder="Cédula/RIF">
+      <div class="qr-box" style="background:transparent;border:1px solid #9ca3af;">
+        <svg width="42" height="42" viewBox="0 0 42 42" aria-label="QR S7B">
+          <rect x="1" y="1" width="40" height="40" rx="9" fill="#fff" stroke="#c7c9d2" stroke-width="2"/>
+          <path d="M10 8h10v10H10zM22 8h10v10H22zM10 20h10v10H10z" fill="none" stroke="#242536" stroke-width="2"/>
+          <path d="M13 11h4v4h-4zM25 11h4v4h-4zM13 23h4v4h-4z" fill="#242536"/>
+          <path d="M22 21h10M27 21v9M22 26h5" stroke="#242536" stroke-width="1.8"/><path d="M5 34h32" stroke="#e91e8f" stroke-width="1.5"/>
+          <text x="21" y="39" text-anchor="middle" font-size="8" font-weight="900" fill="#242536">S7B</text>
+        </svg>
+      </div>
+    </div>
+
+    <input type="text" id="beneficiario" class="text-input" placeholder="Nombre del Beneficiario (Opcional)">
+
+    <div class="row-group">
+      <input type="text" id="monto" class="text-input" placeholder="Monto a Pagar Bs." inputmode="decimal" autocomplete="off" oninput="formatearMonto(this); calcComision()" onblur="completarMonto(this)">
+      <div class="icon-btn">
+        <svg width="38" height="38" viewBox="0 0 40 40" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="3" width="30" height="34" rx="7"/><rect x="11" y="8" width="18" height="8" rx="2"/>
+          <circle cx="13" cy="22" r="1.4" fill="#fff"/><circle cx="20" cy="22" r="1.4" fill="#fff"/><circle cx="27" cy="22" r="1.4" fill="#fff"/>
+          <circle cx="13" cy="29" r="1.4" fill="#fff"/><circle cx="20" cy="29" r="1.4" fill="#fff"/><circle cx="27" cy="29" r="1.4" fill="#fff"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-circle">i</div>
+      <div>
+        <div>Máximo a personas naturales: <strong>Bs. 2.500.000,00</strong></div>
+        <div>Comisión mínima: Bs. 14,00 - máxima 0,30% del monto.</div>
+        <div>Comisión calculada: <strong id="comisionDisplay">Bs. 14,00</strong></div>
+      </div>
+    </div>
+
+    <div class="switch-row">
+      <span>¿Guardar beneficiario en el directorio?</span>
+      <label class="switch">
+        <input type="checkbox" id="saveDir">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <input type="text" id="concepto" class="text-input" placeholder="Concepto (Opcional)" value="Pago Móvil BNC al Instante">
+
+    <div class="btn-grid">
+      <button type="button" class="action-btn btn-gray" onclick="resetForm()">Regresar</button>
+      <button type="button" class="action-btn btn-green" onclick="verificarHuellaYContinuar()">Continuar</button>
+    </div>
+  </div>
+
+  <!-- VISTA 2: COMPROBANTE -->
+  <div id="receiptView" class="container hidden-view">
+    <div class="header-title">App BNC - Comprobante de Pago</div>
+
+    <div class="receipt-card">
+      <!-- LOGO BNC EXACTO A LA PRIMERA IMAGEN (CÚPULA 5 SEGMENTOS + PALABRA BNC) -->
+      <svg width="96" height="44" viewBox="0 0 160 72" fill="none">
+        <path d="M12 66 C12 52 17 40 25 30 L74 66 Z" fill="#ffffff"/>
+        <path d="M29 26 C37 18 46 12 56 8 L77 66 Z" fill="#ffffff"/>
+        <path d="M61 7 C69 5 77 4 85 5 L80 66 Z" fill="#ffffff"/>
+        <path d="M90 6 C100 7 110 11 118 17 L83 66 Z" fill="#ffffff"/>
+        <path d="M123 21 C139 33 148 49 148 66 L87 66 Z" fill="#ffffff"/>
+      </svg>
+      <div class="bnc-receipt-wordmark">BNC</div>
+      <div class="receipt-tagline">Soluciones financieras justo a tu medida.</div>
+
+      <div class="success-banner">
+        <div class="success-check-box">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5">
+            <circle cx="12" cy="12" r="9"/>
+            <polyline points="8.5 12.5 11 15 15.5 9.5"/>
+          </svg>
+        </div>
+        <div class="success-text">¡Su pago móvil ha sido<br>enviado con éxito!</div>
+      </div>
+
+      <div class="receipt-line">Cuenta Debitada: <span id="rCuenta">***9970</span></div>
+      <div class="receipt-line">Beneficiario: <span id="rTelefono">4120000000</span></div>
+      <div class="receipt-line" id="rNombre">Pago</div>
+      <div class="receipt-line"><span id="rDocBanco">V00000000 / 0102-Venezuela</span></div>
+
+      <div class="monto-strip">Monto: <span id="rMonto">Bs.0,00</span></div>
+
+      <div class="receipt-line">Comisión: <span id="rComision">Bs.14,00</span></div>
+
+      <div class="ref-row">
+        <div class="receipt-line">Referencia: <strong id="rRef">000000000</strong></div>
+        <button type="button" class="copy-ref-btn" onclick="copiarReferencia()" title="Copiar referencia">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+            <rect x="8" y="4" width="11" height="13" rx="2"/>
+            <path d="M5 8v10a2 2 0 0 0 2 2h10"/>
+            <circle cx="13.5" cy="10.5" r="2"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="receipt-line">Fecha y Hora: <span id="rFecha">--/--/---- --:--:--</span></div>
+      <div class="receipt-line" style="margin-top:8px;">Concepto: <span id="rConcepto">Pago Móvil BNC al Instante</span></div>
+    </div>
+
+    <!-- 4 ICONOS INFERIORES EXACTOS A LA PRIMERA IMAGEN -->
+    <div class="share-bar">
+      <!-- 1. Cámara Naranja -->
+      <button type="button" class="social-btn" style="background:#f58220;" onclick="descargarPNG()" title="Guardar Imagen">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+      </button>
+      <!-- 2. Compartir Naranja (Flecha curva sólida) -->
+      <button type="button" class="social-btn" style="background:#f58220;" onclick="compartirTexto()" title="Compartir">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff">
+          <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"/>
+        </svg>
+      </button>
+      <!-- 3. WhatsApp Verde (Burbuja + teléfono interior) -->
+      <button type="button" class="social-btn" style="background:#56d86b;" onclick="compartirTexto()" title="WhatsApp">
+        <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#fff" d="M20.52 3.48A11.8 11.8 0 0 0 12.1 0C5.55 0 .22 5.32.22 11.87c0 2.09.55 4.13 1.59 5.93L.12 24l6.36-1.67a11.9 11.9 0 0 0 5.62 1.43h.01c6.55 0 11.88-5.33 11.89-11.88a11.8 11.8 0 0 0-3.48-8.4ZM12.11 21.7a9.86 9.86 0 0 1-5.02-1.37l-.36-.21-3.77.99 1.01-3.67-.24-.38a9.82 9.82 0 0 1-1.51-5.19c0-5.45 4.44-9.89 9.9-9.89a9.82 9.82 0 0 1 7 2.9 9.82 9.82 0 0 1 2.89 7c0 5.46-4.44 9.9-9.9 9.9Zm5.43-7.41c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.47-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.2 5.08 4.49.71.31 1.27.5 1.7.64.72.23 1.37.2 1.88.12.58-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.13-.27-.2-.57-.35Z"/>
+        </svg>
+      </button>
+      <!-- 4. Telegram Azul (Avión de papel sólido) -->
+      <button type="button" class="social-btn" style="background:#41a3e2;" onclick="compartirTexto()" title="Telegram">
+        <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#fff" d="M21.8 2.2 2.9 9.5c-1.29.52-1.28 1.25-.24 1.57l4.85 1.51 1.86 5.78c.23.64.12.9.78.9.51 0 .74-.23 1.02-.5l2.35-2.28 4.88 3.6c.9.5 1.55.24 1.78-.83l3.2-15.1c.34-1.31-.5-1.9-1.59-1.45ZM8.26 12.24l10.65-6.72c.53-.32 1.02-.15.62.2l-8.8 7.95-.34 3.65-2.13-5.08Z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="btn-grid">
+      <button type="button" class="action-btn btn-gray" onclick="volverFormulario()">Regresar</button>
+      <button type="button" class="action-btn btn-green" onclick="otroPago()">Otro Pago</button>
+    </div>
+  </div>
+
+  <script>
+    const DIR_STORAGE_KEY = 'bnc_directorio_contactos_v1';
+
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.getElementById('splashScreen').classList.add('hidden');
+      }, 1800);
+      renderDirectorio();
+    });
+
+    function getDirectorio() {
+      try {
+        return JSON.parse(localStorage.getItem(DIR_STORAGE_KEY)) || [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveToDirectorio(contacto) {
+      let lista = getDirectorio();
+      const idx = lista.findIndex(c => c.cod === contacto.cod && c.cel === contacto.cel && c.banco === contacto.banco);
+      if (idx >= 0) {
+        lista[idx] = contacto;
+      } else {
+        lista.unshift(contacto);
+      }
+      localStorage.setItem(DIR_STORAGE_KEY, JSON.stringify(lista));
+      renderDirectorio();
+    }
+
+    function deleteFromDirectorio(event, index) {
+      event.stopPropagation();
+      let lista = getDirectorio();
+      lista.splice(index, 1);
+      localStorage.setItem(DIR_STORAGE_KEY, JSON.stringify(lista));
+      renderDirectorio();
+    }
+
+    function selectFromDirectorio(index) {
+      const lista = getDirectorio();
+      const c = lista[index];
+      if (!c) return;
+
+      document.getElementById('bancoDestino').value = c.banco;
+      document.getElementById('codCelular').value = c.cod;
+      document.getElementById('celular').value = c.cel;
+      document.getElementById('tipoDoc').value = c.tipoDoc;
+      document.getElementById('cedula').value = c.cedula;
+      document.getElementById('beneficiario').value = c.nombre || '';
+
+      switchTab('sin');
+    }
+
+    function renderDirectorio() {
+      const panel = document.getElementById('directoryPanel');
+      const lista = getDirectorio();
+      if (lista.length === 0) {
+        panel.innerHTML = '<div class="dir-empty">No hay beneficiarios guardados.<br>Activa "¿Guardar beneficiario en el directorio?" al realizar un pago.</div>';
+        return;
+      }
+
+      panel.innerHTML = lista.map((c, idx) => `
+        <div class="dir-item" onclick="selectFromDirectorio(${idx})">
+          <div class="dir-info">
+            <div class="dir-name">${c.nombre ? c.nombre : c.cod + '-' + c.cel}</div>
+            <div class="dir-sub">${c.cod}-${c.cel} • ${c.tipoDoc}${c.cedula} • ${c.banco}</div>
+          </div>
+          <button type="button" class="dir-del-btn" onclick="deleteFromDirectorio(event, ${idx})" title="Eliminar">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function switchTab(tipo) {
+      const tabDir = document.getElementById('tabDir');
+      const tabSin = document.getElementById('tabSin');
+      const overlay = document.getElementById('directoryOverlay');
+
+      if (tipo === 'dir') {
+        tabDir.classList.add('active');
+        tabSin.classList.remove('active');
+        renderDirectorio();
+        overlay.classList.remove('hidden-view');
+      } else {
+        tabSin.classList.add('active');
+        tabDir.classList.remove('active');
+        overlay.classList.add('hidden-view');
+      }
+    }
+
+    // Entrada y presentación monetaria venezolana: 1.000,00
+    function parseNumeroVE(value) {
+      if (typeof value === 'number') return value || 0;
+      let raw = String(value || '').replace(/[^0-9,.-]/g, '');
+      if (raw.includes(',')) raw = raw.replace(/\./g, '').replace(',', '.');
+      else if ((raw.match(/\./g) || []).length > 1) raw = raw.replace(/\./g, '');
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : 0;
+    }
+    // Entrada por desplazamiento de centavos: 1 => 0,01; 10 => 0,10;
+    // 100 => 1,00; 1000 => 10,00; 100000 => 1.000,00.
+    function formatearMonto(input) {
+      const digits = String(input.value || '').replace(/\D/g, '').slice(0, 15);
+      if (!digits) { input.value = ''; return; }
+      input.value = formatNumeroVE(Number(digits) / 100);
+      requestAnimationFrame(() => {
+        try { input.setSelectionRange(input.value.length, input.value.length); } catch (_) {}
+      });
+    }
+    function completarMonto(input) {
+      const n = parseNumeroVE(input.value);
+      if (input.value.trim() !== '') input.value = formatNumeroVE(n);
+      calcComision();
+    }
+    function formatNumeroVE(val) {
+      const num = Number(val) || 0;
+      const parts = num.toFixed(2).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      return parts[0] + ',' + parts[1];
+    }
+
+    function formatBs(val) {
+      return 'Bs.' + formatNumeroVE(val);
+    }
+
+    function calcComision() {
+      const m = parseNumeroVE(document.getElementById('monto').value);
+      const c = Math.max(14, m * 0.003);
+      document.getElementById('comisionDisplay').textContent = 'Bs. ' + formatNumeroVE(c);
+    }
+
+    async function pegarCelular() {
+      try {
+        const txt = await navigator.clipboard.readText();
+        const digits = txt.replace(/\D/g, '');
+        if (digits.length >= 7) {
+          document.getElementById('celular').value = digits.slice(-7);
+        }
+      } catch (e) {}
+    }
+
+    function resetForm() {
+      document.getElementById('celular').value = '';
+      document.getElementById('cedula').value = '';
+      document.getElementById('beneficiario').value = '';
+      document.getElementById('monto').value = '';
+      document.getElementById('saveDir').checked = false;
+      calcComision();
+    }
+
+    async function solicitarBiometriaDispositivo() {
+      if (
+        !window.PublicKeyCredential ||
+        !navigator.credentials ||
+        typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== 'function'
+      ) {
+        return false;
+      }
+
+      try {
+        const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        if (!available) return false;
+      } catch (e) {
+        return false;
+      }
+
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+      const userId = new Uint8Array(16);
+      crypto.getRandomValues(userId);
+
+      try {
+        const cred = await navigator.credentials.create({
+          publicKey: {
+            challenge: challenge,
+            rp: {
+              name: 'BNC',
+              id: window.location.hostname
+            },
+            user: {
+              id: userId,
+              name: 'bnc-' + Date.now(),
+              displayName: 'BNC'
+            },
+            pubKeyCredParams: [
+              { type: 'public-key', alg: -7 },
+              { type: 'public-key', alg: -257 }
+            ],
+            authenticatorSelection: {
+              authenticatorAttachment: 'platform',
+              userVerification: 'required',
+              residentKey: 'discouraged',
+              requireResidentKey: false
+            },
+            timeout: 60000,
+            attestation: 'none'
+          }
+        });
+        return Boolean(cred);
+      } catch (err) {
+        return false;
+      }
+    }
+
+    async function verificarHuellaYContinuar() {
+      const ok = await solicitarBiometriaDispositivo();
+      if (ok) {
+        generarComprobante();
+      }
+    }
+
+    function generarComprobante() {
+      const codRaw = document.getElementById('codCelular').value;
+      const cod = codRaw.replace(/^0/, '');
+      const cel = document.getElementById('celular').value.trim() || '0000000';
+      const tipo = document.getElementById('tipoDoc').value;
+      const ced = document.getElementById('cedula').value.trim() || '00000000';
+      const banco = document.getElementById('bancoDestino').value;
+      const nombre = document.getElementById('beneficiario').value.trim();
+      const montoVal = parseNumeroVE(document.getElementById('monto').value);
+      const comVal = Math.max(14, montoVal * 0.003);
+      const concepto = document.getElementById('concepto').value.trim() || 'Pago Móvil BNC al Instante';
+      const guardar = document.getElementById('saveDir').checked;
+
+      if (guardar && cel !== '0000000') {
+        saveToDirectorio({
+          cod: codRaw,
+          cel: cel,
+          tipoDoc: tipo,
+          cedula: ced,
+          banco: banco,
+          nombre: nombre
+        });
+      }
+
+      const ref = Math.floor(100000000 + Math.random() * 900000000).toString();
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      let hrs = now.getHours();
+      const ampm = hrs >= 12 ? 'p.m.' : 'a.m.';
+      hrs = hrs % 12 || 12;
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      const secs = String(now.getSeconds()).padStart(2, '0');
+
+      document.getElementById('rTelefono').textContent = cod + cel;
+      document.getElementById('rNombre').textContent = nombre !== '' ? nombre : 'Pago';
+      document.getElementById('rDocBanco').textContent = `${tipo}${ced} / ${banco}`;
+      document.getElementById('rMonto').textContent = formatBs(montoVal);
+      document.getElementById('rComision').textContent = formatBs(comVal);
+      document.getElementById('rRef').textContent = ref;
+      document.getElementById('rFecha').textContent = `${dd}/${mm}/${yyyy} ${String(hrs).padStart(2,'0')}:${mins}:${secs} ${ampm}`;
+      document.getElementById('rConcepto').textContent = concepto;
+
+      document.getElementById('formView').classList.add('hidden-view');
+      document.getElementById('receiptView').classList.remove('hidden-view');
+    }
+
+    function volverFormulario() {
+      document.getElementById('receiptView').classList.add('hidden-view');
+      document.getElementById('formView').classList.remove('hidden-view');
+    }
+
+    function otroPago() {
+      resetForm();
+      volverFormulario();
+    }
+
+    function copiarReferencia() {
+      const ref = document.getElementById('rRef').textContent;
+      navigator.clipboard.writeText(ref);
+      alert('Referencia copiada: ' + ref);
+    }
+
+    function compartirTexto() {
+      const txt = `Comprobante Pago Móvil BNC\nMonto: ${document.getElementById('rMonto').textContent}\nReferencia: ${document.getElementById('rRef').textContent}\nFecha: ${document.getElementById('rFecha').textContent}`;
+      if (navigator.share) {
+        navigator.share({ text: txt });
+      } else {
+        navigator.clipboard.writeText(txt);
+        alert('Comprobante copiado al portapapeles');
+      }
+    }
+
+    function descargarPNG() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 2400;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(2, 2);
+      ctx.scale(1, 1.2);
+
+      // Fondo geométrico diagonal exacto a la referencia
+      ctx.fillStyle = '#2b2d3e';
+      ctx.fillRect(0, 0, 540, 980);
+
+      ctx.fillStyle = '#232534';
+      ctx.beginPath();
+      ctx.moveTo(0, 380);
+      ctx.lineTo(540, 220);
+      ctx.lineTo(540, 740);
+      ctx.lineTo(0, 880);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#191a26';
+      ctx.beginPath();
+      ctx.moveTo(0, 880);
+      ctx.lineTo(540, 740);
+      ctx.lineTo(540, 980);
+      ctx.lineTo(0, 980);
+      ctx.closePath();
+      ctx.fill();
+
+      // Título superior
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 28px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('App BNC - Comprobante de Pago', 270, 52);
+
+      // Tarjeta oscura
+      ctx.fillStyle = '#36384e';
+      ctx.beginPath();
+      ctx.roundRect(24, 76, 492, 686, 18);
+      ctx.fill();
+
+      // Logo BNC 5 segmentos exacto
+      ctx.save();
+      ctx.translate(214, 92);
+      ctx.scale(0.7, 0.7);
+      ctx.fillStyle = '#ffffff';
+      const paths = [
+        new Path2D('M12 66 C12 52 17 40 25 30 L74 66 Z'),
+        new Path2D('M29 26 C37 18 46 12 56 8 L77 66 Z'),
+        new Path2D('M61 7 C69 5 77 4 85 5 L80 66 Z'),
+        new Path2D('M90 6 C100 7 110 11 118 17 L83 66 Z'),
+        new Path2D('M123 21 C139 33 148 49 148 66 L87 66 Z')
+      ];
+      paths.forEach(p => ctx.fill(p));
+      ctx.restore();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'italic 900 31px "Arial Black", Segoe UI, sans-serif';
+      ctx.fillText('BNC', 270, 170);
+
+      ctx.font = '18px Segoe UI, sans-serif';
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillText('Soluciones financieras justo a tu medida.', 270, 202);
+
+      // Banner éxito
+      ctx.fillStyle = '#292b3d';
+      ctx.beginPath();
+      ctx.roundRect(44, 222, 452, 92, 12);
+      ctx.fill();
+
+      ctx.fillStyle = '#008f39';
+      ctx.beginPath();
+      ctx.roundRect(44, 222, 92, 92, 12);
+      ctx.fill();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      ctx.arc(90, 268, 20, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(81, 268);
+      ctx.lineTo(88, 275);
+      ctx.lineTo(100, 261);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px Segoe UI, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('¡Su pago móvil ha sido', 156, 262);
+      ctx.fillText('enviado con éxito!', 156, 290);
+
+      // Datos centrados en blanco
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#f3f4f6';
+      ctx.font = '23px Segoe UI, sans-serif';
+      ctx.fillText('Cuenta Debitada: ' + document.getElementById('rCuenta').textContent, 270, 356);
+      ctx.fillText('Beneficiario: ' + document.getElementById('rTelefono').textContent, 270, 394);
+      ctx.fillText(document.getElementById('rNombre').textContent, 270, 428);
+      ctx.fillText(document.getElementById('rDocBanco').textContent, 270, 462);
+
+      // Franja verde monto
+      ctx.fillStyle = '#008f39';
+      ctx.fillRect(24, 488, 492, 60);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 27px Segoe UI, sans-serif';
+      ctx.fillText('Monto: ' + document.getElementById('rMonto').textContent, 270, 527);
+
+      // Comisión, Referencia + Botón naranja copiar, Fecha y Concepto
+      ctx.fillStyle = '#f3f4f6';
+      ctx.font = '23px Segoe UI, sans-serif';
+      ctx.fillText('Comisión: ' + document.getElementById('rComision').textContent, 270, 588);
+
+      ctx.font = 'bold 23px Segoe UI, sans-serif';
+      ctx.fillText('Referencia: ' + document.getElementById('rRef').textContent, 252, 636);
+
+      // Botón naranja de copiar junto a Referencia
+      ctx.fillStyle = '#f58220';
+      ctx.beginPath();
+      ctx.roundRect(452, 604, 48, 48, 10);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.2;
+      ctx.strokeRect(470, 616, 16, 18);
+      ctx.beginPath();
+      ctx.moveTo(466, 622);
+      ctx.lineTo(466, 638);
+      ctx.lineTo(482, 638);
+      ctx.stroke();
+
+      ctx.fillStyle = '#f3f4f6';
+      ctx.font = '22px Segoe UI, sans-serif';
+      ctx.fillText('Fecha y Hora: ' + document.getElementById('rFecha').textContent, 270, 684);
+
+      const conceptoTxt = 'Concepto: ' + document.getElementById('rConcepto').textContent;
+      if (conceptoTxt.length > 32) {
+        const splitIdx = conceptoTxt.lastIndexOf(' ', 32);
+        const line1 = conceptoTxt.slice(0, splitIdx > 0 ? splitIdx : 32);
+        const line2 = conceptoTxt.slice(splitIdx > 0 ? splitIdx + 1 : 32);
+        ctx.fillText(line1, 270, 726);
+        ctx.fillText(line2, 270, 752);
+      } else {
+        ctx.fillText(conceptoTxt, 270, 732);
+      }
+
+      // 4 ICONOS INFERIORES EXACTOS A LA PRIMERA IMAGEN
+      const iconY = 786;
+      const iconSize = 62;
+      const gap = 22;
+      const startX = (540 - (iconSize * 4 + gap * 3)) / 2;
+
+      // 1. Cámara Naranja (#f58220)
+      ctx.fillStyle = '#f58220';
+      ctx.beginPath();
+      ctx.roundRect(startX, iconY, iconSize, iconSize, 14);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.roundRect(startX + 15, iconY + 21, 32, 23, 4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(startX + 23, iconY + 21);
+      ctx.lineTo(startX + 26, iconY + 16);
+      ctx.lineTo(startX + 36, iconY + 16);
+      ctx.lineTo(startX + 39, iconY + 21);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(startX + 31, iconY + 32.5, 6.5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 2. Compartir Naranja (#f58220 - flecha curva blanca)
+      const x2 = startX + iconSize + gap;
+      ctx.fillStyle = '#f58220';
+      ctx.beginPath();
+      ctx.roundRect(x2, iconY, iconSize, iconSize, 14);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(x2 + 33, iconY + 18);
+      ctx.lineTo(x2 + 47, iconY + 30);
+      ctx.lineTo(x2 + 33, iconY + 42);
+      ctx.lineTo(x2 + 33, iconY + 34);
+      ctx.quadraticCurveTo(x2 + 21, iconY + 34, x2 + 16, iconY + 43);
+      ctx.quadraticCurveTo(x2 + 18, iconY + 25, x2 + 33, iconY + 25);
+      ctx.closePath();
+      ctx.fill();
+
+      // 3. WhatsApp: marca reconocible, blanco sobre verde oficial
+      const x3 = x2 + iconSize + gap;
+      ctx.fillStyle = '#25D366'; ctx.beginPath(); ctx.roundRect(x3, iconY, iconSize, iconSize, 14); ctx.fill();
+      ctx.save(); ctx.translate(x3 + 10, iconY + 10); ctx.scale(1.65, 1.65); ctx.fillStyle = '#fff';
+      ctx.fill(new Path2D('M20.52 3.48A11.8 11.8 0 0 0 12.1 0C5.55 0 .22 5.32.22 11.87c0 2.09.55 4.13 1.59 5.93L.12 24l6.36-1.67a11.9 11.9 0 0 0 5.62 1.43h.01c6.55 0 11.88-5.33 11.89-11.88a11.8 11.8 0 0 0-3.48-8.4ZM12.11 21.7a9.86 9.86 0 0 1-5.02-1.37l-.36-.21-3.77.99 1.01-3.67-.24-.38a9.82 9.82 0 0 1-1.51-5.19c0-5.45 4.44-9.89 9.9-9.89a9.82 9.82 0 0 1 7 2.9 9.82 9.82 0 0 1 2.89 7c0 5.46-4.44 9.9-9.9 9.9Zm5.43-7.41c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.47-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.2 5.08 4.49.71.31 1.27.5 1.7.64.72.23 1.37.2 1.88.12.58-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.13-.27-.2-.57-.35Z'));
+      ctx.restore();
+
+      // 4. Telegram: avión de papel blanco sobre azul oficial
+      const x4 = x3 + iconSize + gap;
+      ctx.fillStyle = '#229ED9'; ctx.beginPath(); ctx.roundRect(x4, iconY, iconSize, iconSize, 14); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath();
+      ctx.moveTo(x4 + 48, iconY + 17); ctx.lineTo(x4 + 13, iconY + 30);
+      ctx.quadraticCurveTo(x4 + 10, iconY + 31.5, x4 + 14, iconY + 33);
+      ctx.lineTo(x4 + 23, iconY + 36); ctx.lineTo(x4 + 27, iconY + 46);
+      ctx.quadraticCurveTo(x4 + 28, iconY + 48, x4 + 30, iconY + 46);
+      ctx.lineTo(x4 + 36, iconY + 39); ctx.lineTo(x4 + 44, iconY + 45);
+      ctx.quadraticCurveTo(x4 + 47, iconY + 47, x4 + 48, iconY + 43);
+      ctx.lineTo(x4 + 54, iconY + 20); ctx.quadraticCurveTo(x4 + 55, iconY + 15, x4 + 48, iconY + 17);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#229ED9'; ctx.beginPath(); ctx.moveTo(x4 + 23, iconY + 35);
+      ctx.lineTo(x4 + 44, iconY + 22); ctx.lineTo(x4 + 29, iconY + 39); ctx.lineTo(x4 + 28, iconY + 44); ctx.closePath(); ctx.fill();
+
+      // Botones inferiores Regresar / Otro Pago
+      ctx.fillStyle = '#6c6e7e';
+      ctx.beginPath();
+      ctx.roundRect(24, 882, 236, 62, 10);
+      ctx.fill();
+
+      ctx.fillStyle = '#008f39';
+      ctx.beginPath();
+      ctx.roundRect(280, 882, 236, 62, 10);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px Segoe UI, sans-serif';
+      ctx.fillText('Regresar', 142, 920);
+      ctx.fillText('Otro Pago', 398, 920);
+
+      const link = document.createElement('a');
+      link.download = 'Comprobante_BNC_' + document.getElementById('rRef').textContent + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
+    }
+  </script>
+</body>
+</html>
